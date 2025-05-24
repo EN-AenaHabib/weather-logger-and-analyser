@@ -1,0 +1,159 @@
+{
+  "name": "weather logger and analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 18
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-260, -40],
+      "id": "NODE_ID_1",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather?q=Islamabad&units=metric&appid=YOUR_API_KEY_HERE",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-40, -40],
+      "id": "NODE_ID_2",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\nreturn [{\n  json: {\n    temperature: data.main.temp,\n    description: data.weather[0].main,\n    datetime: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [140, -40],
+      "id": "NODE_ID_3",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_DOC_ID",
+          "mode": "list",
+          "cachedResultName": "weather",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/GOOGLE_SHEET_DOC_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/GOOGLE_SHEET_DOC_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "temperature": "={{ $('Code').item.json.temperature }}",
+            "description": "={{ $('Code').item.json.description }}",
+            "date time": "={{ $('Code').item.json.datetime }}",
+            "message": "={{ $json.text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "temperature", "displayName": "temperature", "type": "string" },
+            { "id": "description", "displayName": "description", "type": "string" },
+            { "id": "date time", "displayName": "date time", "type": "string" },
+            { "id": "message", "displayName": "message", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [760, -60],
+      "id": "NODE_ID_4",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID_GOOGLE_SHEETS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Today's temperature is {{$json.temperature}}°C and the weather is {{$json.description}}.  message with small alert 5 worded with one recommendation ( dont include \\n etc )"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [380, -40],
+      "id": "NODE_ID_5",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [440, 160],
+      "id": "NODE_ID_6",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "CREDENTIAL_ID_GROQ",
+          "name": "Groq account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [{ "node": "HTTP Request", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [{ "node": "Code", "type": "main", "index": 0 }]
+      ]
+    },
+    "Code": {
+      "main": [
+        [{ "node": "Basic LLM Chain", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Sheets": {
+      "main": [[]]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "Basic LLM Chain", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [{ "node": "Google Sheets", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "WORKFLOW_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "INSTANCE_ID_MASKED"
+  },
+  "id": "WORKFLOW_ID",
+  "tags": []
+}
